@@ -1,0 +1,74 @@
+---
+portainer_olafnorge_de_compose:
+  version: "3.6"
+  services:
+    portainer:
+      command: -H tcp://tasks.agent:9001 --tlsskipverify --admin-password-file /run/secrets/portainer_olafnorge_de_admin_pass --no-analytics --no-snapshot
+      deploy:
+        labels: "{{ portainer_olafnorge_de_labels }}"
+        placement:
+          constraints:
+            - node.role != manager
+        mode: replicated
+        replicas: 1
+        restart_policy:
+          condition: on-failure
+          delay: 5s
+          max_attempts: 5
+          window: 300s
+        update_config:
+          failure_action: rollback
+          monitor: 120s
+      image: "portainer/portainer:{{ portainer_olafnorge_de_portainer_version }}"
+      networks: "{{ portainer_olafnorge_de_networks }}"
+      secrets:
+        - source: portainer_olafnorge_de_admin_pass
+      volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+    agent:
+      environment:
+        # REQUIRED: Should be equal to the service name prefixed by "tasks." when
+        # deployed inside an overlay network
+        AGENT_CLUSTER_ADDR: tasks.agent
+        # AGENT_PORT: 9001
+        # LOG_LEVEL: debug
+      deploy:
+        mode: global
+        restart_policy:
+          condition: on-failure
+          delay: 5s
+          max_attempts: 5
+          window: 300s
+        update_config:
+          failure_action: rollback
+          monitor: 120s
+      image: "portainer/agent:{{ portainer_olafnorge_de_agent_version }}"
+      networks:
+        - "{{ portainer_olafnorge_de_network_internal }}"
+      volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - /var/run/docker.sock:/var/run/docker.sock
+        - /var/lib/docker/volumes:/var/lib/docker/volumes
+  networks: "{{ portainer_olafnorge_de_network_definitions }}"
+  secrets:
+    portainer_olafnorge_de_admin_pass:
+      external: true
+
+portainer_olafnorge_de_labels: []
+portainer_olafnorge_de_name: portainerolafnorgede
+portainer_olafnorge_de_network_definitions: []
+portainer_olafnorge_de_network_internal: internal
+portainer_olafnorge_de_networks: []
+portainer_olafnorge_de_portainer_version: linux-amd64-1.23.2
+portainer_olafnorge_de_agent_version: linux-amd64-1.5.1
+portainer_olafnorge_de_use_secrets: yes
+
+portainer_olafnorge_de_secrets:
+  admin_pass:
+    data: "{{ portainer_olafnorge_de_admin_pass }}"
+    name: portainer_olafnorge_de_admin_pass
+
+# vaults, you may define them in a separate file which overrides these defaults
+portainer_olafnorge_de_admin_pass: # FIXME: add your vault here using 'ansible-vault'

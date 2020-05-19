@@ -1,0 +1,24 @@
+---
+- name: assert required variables are set and have reasonable values
+  assert:
+    that:
+      - (portainer_olafnorge_de_labels | length) > 0
+      - (portainer_olafnorge_de_network_definitions | length) > 0
+      - (portainer_olafnorge_de_networks | length) > 0
+
+- name: create secrets for portainer.example.com
+  docker_secret:
+    data: "{{ item.value.data }}"
+    name: "{{ item.value.name }}"
+    state: present
+  no_log: yes
+  with_dict: "{{ portainer_olafnorge_de_secrets }}"
+  when: portainer_olafnorge_de_use_secrets | bool
+
+- name: spawn portainer.example.com service
+  docker_stack:
+    compose:
+      - "{{ portainer_olafnorge_de_compose }}"
+    name: "{{ portainer_olafnorge_de_name }}"
+    prune: yes
+    state: present
